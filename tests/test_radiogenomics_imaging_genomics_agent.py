@@ -12,7 +12,7 @@ from agents.base import PHIGuard, AuditLogger, SecurityException
 from agents.models import SystemTaskPayload, UrgencyLevel, SystemIntegrityStatus
 from agents.workers import InvariantQCWorker, SafetyEscalationWorker, ProtocolConformanceWorker
 from agents.supervisor import SystemSupervisor
-from cli import main
+from cli import main, _safe_resolve_path
 
 
 def test_phi_guard_enforcement():
@@ -21,6 +21,12 @@ def test_phi_guard_enforcement():
 
     # Clean text passes
     PHIGuard.assert_no_phi("Analytical assay specimen KEY-001 optimal")
+
+
+def test_phi_redaction():
+    redacted = PHIGuard.redact_phi("Patient MRN-12345678 test result")
+    assert "REDACTED_IDENTIFIER" in redacted
+    assert "MRN-12345678" not in redacted
 
 
 def test_specialized_workers():
@@ -63,3 +69,18 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_path_traversal_protection():
+    # Test that path traversal is blocked
+    with pytest.raises(ValueError, match="Path traversal detected"):
+        _safe_resolve_path("../../../etc/passwd")
+
+    with pytest.raises(ValueError, match="Path traversal detected"):
+        _safe_resolve_path("..\\..\\windows\\system32\\config\\sam")
+
+
+def test_batch_processing_error_handling():
+    # Test batch with non-existent file
+    result = main(["batch", "-i", "nonexistent_file.csv", "-o", "output.csv"])
+    assert result == 1  # Should return error code

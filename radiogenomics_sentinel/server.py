@@ -10,7 +10,7 @@ coordinator = RadioGenomicsCoordinator()
 
 def create_app():
     try:
-        from fastapi import FastAPI
+        from fastapi import FastAPI, Request
         from pydantic import BaseModel
 
         app = FastAPI(
@@ -18,6 +18,17 @@ def create_app():
             description="Extracts 3D radiomic features (Shape, GLCM texture, Wavelet filters) and correlates imaging phenotypes with driver mutations (EGFR, IDH1, KRAS).",
             version="2.0.0-FRONTIER",
         )
+
+        # Security headers middleware
+        @app.middleware("http")
+        async def add_security_headers(request: Request, call_next):
+            response = await call_next(request)
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Cache-Control"] = "no-store"
+            return response
 
         class TaskRequest(BaseModel):
             task_id: str = "TASK-2026-001"
