@@ -3,6 +3,7 @@ Supervisor Orchestrator & Operations Intelligence for Radiogenomics Imaging Geno
 Domain: Radiology & Neuroimaging Systems
 """
 import uuid
+import json
 from typing import Dict, Any, List, Optional
 from .base import AuditLogger, ActionExecutor, PHIGuard
 from .models import SystemTaskPayload, AgentAlert, ConsensusDossier, UrgencyLevel, SystemIntegrityStatus
@@ -25,6 +26,8 @@ class SystemSupervisor:
         PHIGuard.assert_no_phi(payload.task_id)
         PHIGuard.assert_no_phi(payload.target_identifier)
         PHIGuard.assert_no_phi(payload.status_descriptor)
+        PHIGuard.assert_no_phi(json.dumps(payload.attributes, ensure_ascii=False))
+        PHIGuard.assert_no_phi(actor)
 
         # Multi-worker evaluations
         all_alerts: List[AgentAlert] = []
@@ -75,5 +78,5 @@ class SystemSupervisor:
 
     def query_supervisory_chat(self, query: str) -> str:
         PHIGuard.assert_no_phi(query)
-        prompt = f"Supervisor inquiry for Radiogenomics Imaging Genomics Agent under ACR RADS / Fleischner Society / ASPECTS Guidelines: {query}"
+        prompt = f"Supervisor inquiry for Radiogenomics Imaging Genomics Agent using demonstration thresholds (not a clinical assessment): {query}"
         return self.llm.invoke(prompt)

@@ -15,7 +15,7 @@ def create_app():
 
         app = FastAPI(
             title="RadioGenomics Sentinel: PyRadiomics Feature & Somatic Mutation Association Agent",
-            description="Extracts 3D radiomic features (Shape, GLCM texture, Wavelet filters) and correlates imaging phenotypes with driver mutations (EGFR, IDH1, KRAS).",
+            description="Evaluates illustrative numeric thresholds and descriptor keywords; no radiomic extraction or genomic association analysis.",
             version="2.0.0-FRONTIER",
         )
 
