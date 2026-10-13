@@ -32,3 +32,7 @@ radiogenomics-imaging-genomics-engine = "radiogenomics_sentinel.cli:main"
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/radiogenomics-imaging-genomics-agent"
 Repository = "https://github.com/abusuraihsakhri/radiogenomics-imaging-genomics-engine.git"
+
+[tool.setuptools]
+packages = ["agents", "radiogenomics_sentinel"]
+py-modules = ["cli", "enrichment", "simulator", "radiogenomics_sentinel_app"]
