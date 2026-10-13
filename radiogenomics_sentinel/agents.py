@@ -105,6 +105,6 @@ class RadioGenomicsCoordinator:
         if "status" in q or "ledger" in q:
             return f"RadioGenomics Sentinel: PyRadiomics Feature & Somatic Mutation Association Agent currently managing {len(self.execution_ledger)} execution tasks in air-gapped memory."
         elif "standard" in q or "spec" in q:
-            return "Active runtime operating strictly according to Image Biomarker Standardisation Initiative (IBSI) specifications."
+            return "The project references the Image Biomarker Standardisation Initiative (IBSI), but does not assess IBSI conformance."
         else:
             return f"RadioGenomics Sentinel: PyRadiomics Feature & Somatic Mutation Association Agent executive coordinator online. Zero-telemetry on-premises surveillance active."
