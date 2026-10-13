@@ -115,3 +115,53 @@ def test_static_web_javascript_and_rule_parity(tmp_path):
     assert warning["overall_urgency"] == "ELEVATED_RISK"
     assert critical["overall_urgency"] == "CRITICAL_STAT_PANIC"
     assert not any("audit_hash" in result for result in (normal, warning, critical))
+
+
+def test_api_success_and_safe_sensitive_input_failure():
+    from fastapi.testclient import TestClient
+    from agents.api import app
+
+    client = TestClient(app)
+    response = client.post("/api/audit", json={
+        "task_id": "SYNTHETIC-T",
+        "target_identifier": "MODEL-1",
+        "primary_metric": 30.0,
+        "secondary_metric": 4.0,
+    })
+    assert response.status_code == 200
+    dossier = response.json()
+    assert dossier["overall_urgency"] == "ELEVATED_RISK"
+    assert dossier["audit_hash"]
+    assert client.get("/api/audit/logs").json()["verified"] is True
+
+    bad = client.post("/api/audit", json={
+        "task_id": "SYNTHETIC-T",
+        "target_identifier": "person@example.org",
+        "primary_metric": 1.0,
+    })
+    assert bad.status_code == 400
+    assert "person@example.org" not in bad.text
+
+    nested = client.post("/api/audit", json={
+        "task_id": "SYNTHETIC-T",
+        "target_identifier": "MODEL-1",
+        "primary_metric": 1.0,
+        "attributes": {"contact": "person@example.org"},
+    })
+    assert nested.status_code == 400
+    assert "person@example.org" not in nested.text
+
+
+def test_benchmark_cases_remain_consistent():
+    from agents.base import PHIGuard
+    from agents.models import SystemIntegrityStatus, UrgencyLevel
+    data = json.loads((Path(__file__).parent.parent / "benchmark_dataset.json").read_text())
+    supervisor = SystemSupervisor(model_provider="mock")
+    for case in data["test_cases"]:
+        if case.get("expected_security_exception"):
+            with pytest.raises(SecurityException):
+                PHIGuard.assert_no_phi(case["adversarial_prompt"])
+        else:
+            output = supervisor.process_task(SystemTaskPayload(**case["payload"]))
+            assert output.overall_urgency.value == case["expected_urgency"]
+            assert output.integrity_status.value == case["expected_integrity"]
