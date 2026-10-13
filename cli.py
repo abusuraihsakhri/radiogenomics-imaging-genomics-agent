@@ -14,11 +14,16 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 def _safe_resolve_path(file_path: str, must_exist: bool = False) -> Path:
     """Resolve a path safely, preventing path traversal outside the working directory."""
-    base = Path.cwd()
-    resolved = (base / file_path).resolve()
-    # Ensure the resolved path is within the working directory
-    if not str(resolved).startswith(str(base.resolve())):
-        raise ValueError(f"Path traversal detected: '{file_path}' resolves outside the working directory")
+    base = Path.cwd().resolve()
+    # Normalize Windows separators even when running on Linux. Reject drive/UNC
+    # paths rather than interpreting them as innocuous POSIX filenames.
+    from pathlib import PureWindowsPath
+    windows_path = PureWindowsPath(file_path)
+    if windows_path.drive:
+        raise ValueError(f"Path traversal detected: '{file_path}'")
+    resolved = (base / file_path.replace("\\", "/")).resolve()
+    if not resolved.is_relative_to(base):
+        raise ValueError(f"Path traversal detected: '{file_path}'")
     if must_exist and not resolved.exists():
         raise FileNotFoundError(f"Input file not found: '{file_path}'")
     return resolved
