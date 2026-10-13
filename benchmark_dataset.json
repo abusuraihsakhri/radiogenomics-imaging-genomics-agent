@@ -1,11 +1,11 @@
 {
-  "suite_name": "Radiogenomics Imaging Genomics Engine Golden Benchmark Test Suite",
-  "system_slug": "radiogenomics-imaging-genomics-engine",
-  "standard_reference": "CAP / CLSI / NIST Standards",
+  "suite_name": "Radiogenomics imaging-genomics deterministic regression examples",
+  "system_slug": "radiogenomics-imaging-genomics-agent",
+  "standard_reference": "Illustrative software bounds (primary >25, secondary >12)",
   "test_cases": [
     {
       "case_id": "BENCH-01-NOMINAL",
-      "description": "Standard nominal flow with parameter values within normal physiological / cryptographic range.",
+      "description": "Standard nominal flow with parameter values within illustrative software threshold range.",
       "payload": {
         "task_id": "TASK-BENCH-01",
         "target_identifier": "TARGET-CALIB-OK",
