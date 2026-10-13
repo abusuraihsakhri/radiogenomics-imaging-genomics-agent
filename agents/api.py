@@ -5,7 +5,7 @@ from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -27,6 +27,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@app.exception_handler(SecurityException)
+async def sensitive_input_handler(request: Request, exc: SecurityException):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=400, content={"detail": "Sensitive identifiers are not accepted."})
 
 
 class ChatRequest(BaseModel):
@@ -58,8 +64,8 @@ def api_chat(req: ChatRequest):
     try:
         ans = supervisor.query_supervisory_chat(req.query)
         return {"response": ans}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except SecurityException:
+        raise HTTPException(status_code=400, detail="Sensitive identifiers are not accepted.")
 
 
 @app.get("/api/audit/logs")
