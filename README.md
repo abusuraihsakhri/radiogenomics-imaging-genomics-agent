@@ -1,201 +1,73 @@
 # Radiogenomics Imaging Genomics Agent
 
-> **Domain:** Diagnostic Radiology & Medical Imaging AI
-> **Reference Guidelines & Standards:** `American College of Radiology (ACR) RADS & Fleischner Society`
+A Python research-software prototype for **deterministic threshold and descriptor checks**, with two CLI implementations, a FastAPI service, batch CSV processing, an in-memory HMAC audit chain, and a browser-only demonstrator.
 
-<div align="center">
+**Scope:** This repository does **not** extract features from medical images, parse DICOM volumes, perform PyRadiomics/IBSI calculations, analyze genomic variants, or establish imaging–genomics associations. Despite the repository name, the implemented rules are **not validated clinical thresholds**. Do not use its alerts or descriptors for diagnosis, patient triage, or treatment decisions.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+## Browser demonstration
 
-</div>
+Open [`web/index.html`](web/index.html) in a modern browser. The static interface executes the same basic three worker rules as the primary Python implementation locally, displays their classifications, and exports the result as JSON. It requires no server or Python installation.
 
----
+Inputs remain in the browser's current page; the interface makes no API calls and does not create cryptographic audit signatures. **Use synthetic, non-patient data only.** A GitHub Pages deployment workflow is included; deployment availability depends on the repository's Pages configuration.
 
-## 📖 What It Does
+## Implemented functionality
 
-**Radiogenomics Imaging Genomics Agent** is an advanced analytical and computational platform implementing 3D PyRadiomics texture GLCM & EGFR/IDH1 driver mutation association agent. It provides multi-worker evaluation, cryptographic audit trails, and zero-PHI outbound protection for medical imaging analysis workflows.
+| Component | Current behavior |
+| --- | --- |
+| Primary Python workers (`agents/`) | Elevated alert if primary metric >25, elevated alert if secondary metric >12, critical alert if explicit critical flag, keyword alert for `DISCORDANT`, `ANOMALY`, `MUTANT`, `VIOLATION`, `FAIL`, or `REJECT` |
+| Main CLI (`cli.py`) | Single case, configuration-response mock, CSV batch, audit verification, and API server |
+| Main API (`agents/api.py`) | `GET /health`, `GET /metrics`, `POST /api/audit`, `POST /api/chat`, `GET /api/audit/logs`; interactive schema at `/docs` |
+| Legacy research prototype (`radiogenomics_sentinel/`) | Separate CLI/API and illustrative primary >25 / secondary >10 rules |
+| `enrichment.py` | Experimental generic threshold-check stubs; **not** a survivorship-plan generator or radiogenomics analysis |
+| Audit trail | In-process chained HMAC-SHA256 over selected audit metadata and hashed details; does **not** persist between restarts |
+| Identifier screening | Heuristic pattern checks for common identifiers on the primary Python path; **not** reliable anonymization, HIPAA certification, or a substitute for data governance |
 
----
+The browser and Python rules are intentionally distinguished: only the Python primary path creates a signed in-memory audit entry. No actual external LLM integrations are implemented; `mock` is the only supported provider.
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Install and run
 
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
-- **Multi-Worker Architecture**: InvariantQC, Safety Escalation, and Protocol Conformance workers.
-- **Batch Processing**: CSV-based batch evaluation with error handling and reporting.
-
----
-
-## 💻 Installation
+Requires Python 3.9 or newer. For development and tests:
 
 ```bash
-# Clone the repository
 git clone https://github.com/abusuraihsakhri/radiogenomics-imaging-genomics-agent.git
 cd radiogenomics-imaging-genomics-agent
-
-# Install dependencies
-pip install fastapi uvicorn pydantic pytest
-
-# Optional: Set audit secret key (recommended for production)
-export AUDIT_SECRET_KEY="your-secure-random-key-here"
+python -m pip install -e ".[dev]"
+python -m pytest -q
 ```
 
----
+For the primary CLI:
 
-## 💻 CLI Quickstart & Usage
-
-### 1. Single Task Evaluation
 ```bash
-python cli.py audit --task-id TASK-001 --target TARGET-01 --primary 28.5 --secondary 14.2 --critical --status DISCORDANT
-```
-
-### 2. Interactive Chat Query
-```bash
-python cli.py chat "What is the system status?"
-```
-
-### 3. Batch CSV Processing
-```bash
-python cli.py batch -i sample.csv -o results.csv
-```
-
-### 4. Verify Audit Trail Integrity
-```bash
+python cli.py audit --task-id SYNTHETIC-001 --target MODEL-A --primary 28.5 --secondary 14.2
+python cli.py batch --input sample.csv --output results.csv
 python cli.py verify-audit
 ```
 
-### 5. Launch FastAPI REST Server
+To start the local API:
+
 ```bash
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-### Parameter Reference
-| Parameter | Description | Default |
-|:----------|:------------|:--------|
-| `--task-id` | Unique task/case identifier | `TASK-2026-001` |
-| `--target` | Entity or target identifier | `KEY-TARGET-01` |
-| `--primary` | Primary domain measurement (float) | `28.5` |
-| `--secondary` | Secondary kinetic/confidence score (float) | `14.2` |
-| `--critical` | Emergency escalation flag | `False` |
-| `--status` | Status code or phenotype descriptor | `DISCORDANT` |
+Visit `http://127.0.0.1:8000/docs`. For the separate prototype, use `python radiogenomics_sentinel_app.py --help`. The CSV batch input uses `task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor` headers. Rows with invalid numeric values or blocked identifiers in the primary CLI are skipped with a diagnostic; any output may contain supplied labels, so use synthetic identifiers.
 
-### Input Data Schema (CSV)
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Parameter / observation metric | Required |
-| `target_identifier` | Parameter / observation metric | Required |
-| `primary_metric` | Primary measurement value (float) | Required |
-| `secondary_metric` | Secondary measurement value (float) | Optional |
-| `is_critical_flag` | Emergency escalation flag (true/false) | Optional |
-| `status_descriptor` | Status code or phenotype descriptor | Optional |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-* **Security Headers:** All API responses include X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, and HSTS headers.
-* **Path Traversal Protection:** Batch processing validates file paths to prevent directory traversal attacks.
-
-### Environment Variables
-
-| Variable | Description | Required |
-|:---------|:------------|:---------|
-| `AUDIT_SECRET_KEY` | Secret key for HMAC-SHA256 audit trail signing | Recommended |
-| `MODEL_PROVIDER` | LLM provider (mock, ollama, claude, openai) | No (default: mock) |
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+## Docker
 
 ```bash
-pytest -v
+cp .env.example .env
+# Set AUDIT_SECRET_KEY in .env to a random secret before starting
+docker compose up --build
 ```
 
-Execute high-throughput batch simulation benchmarks:
+Compose binds port 8000 to the host loopback interface by default. The API has **no authentication**, so it must not be exposed to untrusted networks without appropriate access controls. The development audit key fallback is randomly generated per process and is not a persistent signing identity.
 
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
+## Quality, privacy, and limitations
 
----
+Run `python -m pytest -q` and `python -m pip check`. CI runs tests and Python compilation across supported Python versions, plus a Node-based static browser JavaScript regression check. The API is a runtime Python service and **cannot run directly on GitHub Pages**; only the standalone static demonstration is suitable for Pages. Pyodide is unnecessary for these lightweight demonstration rules, and would not enable the missing image-processing functionality.
 
-## 🐳 Container Deployment
+The Python service stores dossiers and audit metadata **only in process memory**; it does not implement durable ledgers, secure user authentication, validated PHI de-identification, clinical guideline conformance, medical image segmentation, radiomic feature extraction, genomic variant association, or clinical decision support. Test and demonstration use should employ synthetic data.
 
-### Docker
-```bash
-# Build and run
-docker build -t radiogenomics-imaging-genomics-agent .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-secret-key" radiogenomics-imaging-genomics-agent
-```
+## Technology and license
 
-### Docker Compose
-```bash
-# Create .env file with required variables
-echo "AUDIT_SECRET_KEY=your-secure-random-key-here" > .env
-
-# Start services
-docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-radiogenomics-imaging-genomics-agent/
-├── agents/                      # Core agent modules
-│   ├── __init__.py
-│   ├── api.py                   # FastAPI REST server
-│   ├── base.py                  # Security, PHI guard, audit trail
-│   ├── learning.py              # Bayesian calibration engine
-│   ├── llm_factory.py           # LLM provider factory
-│   ├── metrics.py               # Prometheus metrics exporter
-│   ├── models.py                # Pydantic data models
-│   ├── streamer.py              # WebSocket telemetry streamer
-│   ├── supervisor.py            # Supervisor orchestrator
-│   └── workers.py               # Specialized worker agents
-├── radiogenomics_sentinel/      # Frontier domain modules
-│   ├── __init__.py
-│   ├── agents.py                # Sub-agents and coordinator
-│   ├── cli.py                   # Frontier CLI
-│   ├── engine.py                # Core algorithmic engine
-│   ├── models.py                # Frontier data models
-│   └── server.py                # Frontier FastAPI server
-├── tests/                       # Test suite
-│   ├── test_enrichment.py
-│   ├── test_radiogenomics_imaging_genomics_agent.py
-│   └── test_radiogenomics_sentinel.py
-├── web/                         # Web interface
-│   └── index.html
-├── cli.py                       # Main CLI entry point
-├── radiogenomics_sentinel_app.py  # Frontier CLI entry point
-├── simulator.py                 # High-throughput simulator
-├── enrichment.py                # Enrichment feature suite
-├── sample.csv                   # Sample batch input
-├── sample_payload.json          # Sample API payload
-├── benchmark_dataset.json       # Golden benchmark test cases
-├── pyproject.toml               # Project configuration
-├── Dockerfile                   # Docker build config
-├── docker-compose.yml           # Docker Compose config
-└── .gitignore                   # Git ignore rules
-```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Python, Pydantic v2, FastAPI/Uvicorn, pytest; HTML/CSS/vanilla JavaScript for the local static interface. The browser demonstrator targets current desktop and mobile browsers supporting ES2020 features, Blob downloads, and basic DOM APIs. Licensed under the [MIT License](LICENSE).
